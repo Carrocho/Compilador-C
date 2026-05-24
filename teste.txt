@@ -1,10 +1,22 @@
-int main() {
-    float x = 10.5;
-    char[100] texto = "teste sem fechar
-    1numero_invalido = 0;
-    if(x >= 10){
-        texto = "aaa"
-        x = 10.0.1
+/* teste teste*/
+
+int x = 100;
+
+int calcular_soma(int a, int b) {
+    a = a + b;
+}
+
+void main() {
+    float a = 222.2;
+    char mensagem = "aaaaa";
+    int contador = 0;
+    x = 10/10;
+    if (taxa_global >= 50) {
+        contador = contador + 1;
     }
-    $$
+
+    while (contador < 10) {
+        contador = contador + 2;
+        calcular_soma(contador, 5);
+    }
 }

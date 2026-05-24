@@ -1,9 +1,9 @@
 all:
-	gcc analisador.c -o analisador
-	./analisador teste.txt
+	gcc main.c lexer.c parser.c -o compilador -Wall
+	./compilador teste.txt
 
 run:
-	./analisador teste.txt
+	./compilador teste.txt
 
 clean:
-	rm analisador
+	rm -f compilador

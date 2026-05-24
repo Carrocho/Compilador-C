@@ -1,0 +1,29 @@
+/* TESTE PARA ERROS */
+
+x = 100;
+
+int global_var = 10;
+
+float @taxa_invalida = 5.5;
+
+void calcular_dados(valor) {
+    
+    char texto = "Esta string esqueceram de fechar
+    
+    int 1contador = 0;
+
+    float pi = 3.14.15;
+
+    int numero_valido = 50
+
+    processar(numero_valido);
+
+    if (numero_valido > 10 {
+        global_var = 20;
+    }
+
+    numero_valido = 100
+    
+    global_var = 0;
+    global_var;
+}
