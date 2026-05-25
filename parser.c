@@ -7,7 +7,6 @@ static TokenList *tokens;
 static int pos = 0;
 static int tem_erro = 0;
 
-// --- FUNÇÕES DA AST ---
 ASTNode* criarNoAST(ASTNodeType tipo, const char *valor){
     ASTNode *no = malloc(sizeof(ASTNode));
     no->tipo = tipo;
@@ -27,7 +26,6 @@ void adicionarFilhoAST(ASTNode *pai, ASTNode *filho){
     pai->filhos[pai->qtd_filhos++] = filho;
 }
 
-// --- NAVEGAÇÃO E RECUPERAÇÃO DE ERROS ---
 Token atual(){ return tokens->tokens[pos]; }
 Token anterior(){ return tokens->tokens[pos > 0 ? pos - 1 : 0]; }
 
