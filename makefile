@@ -5,5 +5,8 @@ all:
 run:
 	./compilador teste.txt
 
+erro:
+	./compilador testeErros.txt
+
 clean:
 	rm -f compilador

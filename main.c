@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
         TokenList tokens = analisarLexico(buf);
         imprimirTokens(&tokens);
         
-        // 2. Sintático
+        // 2. Sintático + semantico
         printf("\nAnalisador sintático\n");
         ASTNode *arvore_sintatica = NULL;
         int sucesso = analisarSintaxe(&tokens, &arvore_sintatica);
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
             imprimirAST(arvore_sintatica, 0);
         } else {
             printf("ERRO!\n");
-            imprimirAST(arvore_sintatica, 0);
+           // imprimirAST(arvore_sintatica, 0);
         }
 
         // Limpeza

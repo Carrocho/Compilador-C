@@ -1,5 +1,7 @@
 /* teste teste*/
 
+int taxa_global;
+
 int x = 100;
 
 int calcular_soma(int a, int b) {
