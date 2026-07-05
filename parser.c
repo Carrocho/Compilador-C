@@ -6,10 +6,12 @@
 static TokenList *tokens;
 static int pos = 0;
 static int tem_erro = 0;
+static int mips_if_count = 0;
+static int mips_while_count = 0;
+static int mips_str_count = 0;
 
-// ============================================================================
-// TABELA DE SÍMBOLOS E ANÁLISE SEMÂNTICA
-// ============================================================================
+FILE *file_mips = NULL;
+
 #define MAX_SIMB 2000
 
 typedef enum{ SIM_VAR, SIM_FUNC } SimCategoria;
@@ -244,6 +246,17 @@ ASTNode* bloco(int criarEscopo);
 // fator -> NUMERO | STRING | ID | ID '(' argumentos ')' | '(' expressao ')'
 ASTNode* fator(){
     if(match(TOKEN_INT) || match(TOKEN_FLOAT) || match(TOKEN_STRING)){
+        if (strchr(anterior().lexema, '.')) {
+            fprintf(file_mips, "  li $t0, 0\n");
+        } else if (anterior().lexema[0] == '"') {
+            int id = mips_str_count++;
+            fprintf(file_mips, "\n.data\nstr_%d: .asciiz %s\n.text\n", id, anterior().lexema);
+            fprintf(file_mips, "  la $t0, str_%d\n", id);
+        } else if (anterior().lexema[0] == '\'') {
+            fprintf(file_mips, "  li $t0, %d\n", anterior().lexema[1]);
+        } else {
+            fprintf(file_mips, "  li $t0, %s\n", anterior().lexema);
+        }
         return criarNoAST(AST_LITERAL, anterior().lexema);
     }
 
@@ -271,6 +284,7 @@ ASTNode* fator(){
             return chamada;
         }
         verificarUsoSimbolo(nome, linha_id, coluna_id, 0);
+        fprintf(file_mips, "  lw $t0, var_%s\n", nome);
         //se não tinha '(', então é só uma variável normal
         return criarNoAST(AST_IDENTIFICADOR, nome);
     }
@@ -289,11 +303,23 @@ ASTNode* termo(){
     ASTNode *no = fator();
     while(matchLexema(TOKEN_OP, "*") || matchLexema(TOKEN_OP, "/")){
         Token tokenAnterior = anterior();
+        fprintf(file_mips, "  addi $sp, $sp, -4\n");
+        fprintf(file_mips, "  sw $t0, 0($sp)\n");
+        
         ASTNode *novo_no = criarNoAST(AST_EXPRESSAO_BINARIA, tokenAnterior.lexema);
         adicionarFilhoAST(novo_no, no);
         
         ASTNode *dir = fator();
         adicionarFilhoAST(novo_no, dir);
+        
+        fprintf(file_mips, "  lw $t1, 0($sp)\n");
+        fprintf(file_mips, "  addi $sp, $sp, 4\n");
+        if (strcmp(tokenAnterior.lexema, "*") == 0) {
+            fprintf(file_mips, "  mul $t0, $t1, $t0\n");
+        } else if (strcmp(tokenAnterior.lexema, "/") == 0) {
+            fprintf(file_mips, "  div $t1, $t0\n");
+            fprintf(file_mips, "  mflo $t0\n");
+        }
         
         // Verifica Tipos na Tabela de Operadores
         const char* tipo_esq = obterTipoExpressao(no);
@@ -310,11 +336,26 @@ ASTNode* expressao(){
     while(atual().tipo == TOKEN_OP){
         Token tokenAnterior = atual();
         avancar();
+        
+        fprintf(file_mips, "  addi $sp, $sp, -4\n");
+        fprintf(file_mips, "  sw $t0, 0($sp)\n");
+        
         ASTNode *novo_no = criarNoAST(AST_EXPRESSAO_BINARIA, tokenAnterior.lexema);
         adicionarFilhoAST(novo_no, no);
         
         ASTNode *dir = termo();
         adicionarFilhoAST(novo_no, dir);
+        
+        fprintf(file_mips, "  lw $t1, 0($sp)\n");
+        fprintf(file_mips, "  addi $sp, $sp, 4\n");
+        if (strcmp(tokenAnterior.lexema, "+") == 0) fprintf(file_mips, "  add $t0, $t1, $t0\n");
+        else if (strcmp(tokenAnterior.lexema, "-") == 0) fprintf(file_mips, "  sub $t0, $t1, $t0\n");
+        else if (strcmp(tokenAnterior.lexema, "==") == 0) fprintf(file_mips, "  seq $t0, $t1, $t0\n");
+        else if (strcmp(tokenAnterior.lexema, "!=") == 0) fprintf(file_mips, "  sne $t0, $t1, $t0\n");
+        else if (strcmp(tokenAnterior.lexema, ">") == 0) fprintf(file_mips, "  sgt $t0, $t1, $t0\n");
+        else if (strcmp(tokenAnterior.lexema, "<") == 0) fprintf(file_mips, "  slt $t0, $t1, $t0\n");
+        else if (strcmp(tokenAnterior.lexema, ">=") == 0) fprintf(file_mips, "  sge $t0, $t1, $t0\n");
+        else if (strcmp(tokenAnterior.lexema, "<=") == 0) fprintf(file_mips, "  sle $t0, $t1, $t0\n");
         
         // Verifica Tipos na Tabela de Operadores
         const char* tipo_esq = obterTipoExpressao(no);
@@ -359,10 +400,13 @@ ASTNode* statement(){
             inserirSimbolo(nome_var, tipo, SIM_VAR, linha_var, coluna_var);
             adicionarFilhoAST(no, criarNoAST(AST_IDENTIFICADOR, nome_var));
             
+            fprintf(file_mips, "\n.data\nvar_%s: .word 0\n.text\n", nome_var);
+            
             if(matchLexema(TOKEN_OP, "=")){
                 ASTNode *expr = expressao();
                 adicionarFilhoAST(no, expr);
                 verificarUsoSimbolo(nome_var, linha_var, coluna_var, 1);
+                fprintf(file_mips, "  sw $t0, var_%s\n", nome_var);
                 
                 // Validação de tipos na atribuição
                 verificarCompatibilidadeAtribuicao(tipo, obterTipoExpressao(expr), linha_var, coluna_var);
@@ -375,19 +419,27 @@ ASTNode* statement(){
     }
     // Condição(IF)
     else if(matchLexema(TOKEN_KEYWORD, "if")){
+        int id = mips_if_count++;
         no = criarNoAST(AST_IF, "if");
         if(!matchLexema(TOKEN_DELIM, "(")) erroSintatico("(");
         adicionarFilhoAST(no, expressao());
+        fprintf(file_mips, "  beq $t0, $zero, L_IF_END_%d\n", id);
         if(!matchLexema(TOKEN_DELIM, ")")) erroSintatico(")");
         adicionarFilhoAST(no, bloco(1));
+        fprintf(file_mips, "L_IF_END_%d:\n", id);
     }
     // Repetição(WHILE)
     else if(matchLexema(TOKEN_KEYWORD, "while")){
+        int id = mips_while_count++;
         no = criarNoAST(AST_WHILE, "while");
+        fprintf(file_mips, "L_WHILE_START_%d:\n", id);
         if(!matchLexema(TOKEN_DELIM, "(")) erroSintatico("(");
         adicionarFilhoAST(no, expressao());
+        fprintf(file_mips, "  beq $t0, $zero, L_WHILE_END_%d\n", id);
         if(!matchLexema(TOKEN_DELIM, ")")) erroSintatico(")");
         adicionarFilhoAST(no, bloco(1));
+        fprintf(file_mips, "  j L_WHILE_START_%d\n", id);
+        fprintf(file_mips, "L_WHILE_END_%d:\n", id);
     }
     // Atribuição
     else if(match(TOKEN_ID)){
@@ -403,6 +455,7 @@ ASTNode* statement(){
             ASTNode *expr = expressao();
             adicionarFilhoAST(no, expr);
             verificarUsoSimbolo(nome_var, linha_var, coluna_var, 1);
+            fprintf(file_mips, "  sw $t0, var_%s\n", nome_var);
             
             // Validação de tipos na atribuição
             int idx = buscarSimboloGlobal(nome_var);
@@ -479,10 +532,13 @@ ASTNode* declaracaoGlobal(){
                 ASTNode *no_decl = criarNoAST(AST_DECLARACAO, tipo);
                 adicionarFilhoAST(no_decl, criarNoAST(AST_IDENTIFICADOR, nome));
                 
+                fprintf(file_mips, "\n.data\nvar_%s: .word 0\n.text\n", nome);
+                
                 if(matchLexema(TOKEN_OP, "=")){
                     ASTNode *expr = expressao();
                     adicionarFilhoAST(no_decl, expr);
                     verificarUsoSimbolo(nome, linha_decl, coluna_decl, 1);
+                    fprintf(file_mips, "  sw $t0, var_%s\n", nome);
                     verificarCompatibilidadeAtribuicao(tipo, obterTipoExpressao(expr), linha_decl, coluna_decl);
                 }
                 if(!matchLexema(TOKEN_DELIM, ";")) erroSintatico(";");
@@ -502,6 +558,9 @@ ASTNode* declaracaoGlobal(){
 int analisarSintaxe(TokenList *lista, ASTNode **raiz_ast){
     tokens = lista; pos = 0; tem_erro = 0; totalSimbolos = 0; escopoAtual = 0;
     escopoAtual++; 
+    
+    file_mips = tmpfile();
+    fprintf(file_mips, "\nGERAÇÃO DE CÓDIGO\n");
 
     *raiz_ast = criarNoAST(AST_PROGRAMA, "PROGRAMA");
 
@@ -512,6 +571,17 @@ int analisarSintaxe(TokenList *lista, ASTNode **raiz_ast){
     }
     
     sairEscopo(); 
+    
+    if (!tem_erro) {
+        rewind(file_mips);
+        char c;
+        while ((c = fgetc(file_mips)) != EOF) {
+            putchar(c); // Imprime
+        }
+    }
+    
+    if (file_mips) fclose(file_mips);
+    
     return !tem_erro;
 }
 

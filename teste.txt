@@ -1,24 +1,19 @@
-/* teste teste*/
-
-int taxa_global;
-
+int taxa_global = 50;
+int maximo_tentativas = 10;
 int x = 100;
 
-int calcular_soma(int a, int b) {
-    a = a + b;
-}
-
 void main() {
-    float a = 222.2;
-    char mensagem = "aaaaa";
     int contador = 0;
-    x = 10/10;
+    char letra = 'A';
+    char nome = "Eduardo";
+    
+    x = x / 10;
+    
     if (taxa_global >= 50) {
         contador = contador + 1;
     }
-
-    while (contador < 10) {
+    
+    while (contador < maximo_tentativas) {
         contador = contador + 2;
-        calcular_soma(contador, 5);
     }
 }

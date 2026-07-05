@@ -33,8 +33,8 @@ int main(int argc, char *argv[]) {
         // 3. Resultado
         if (sucesso) {
             printf("SUCESSO!\n");
-            printf("\n--- ÁRVORE SINTÁTICA ---\n");
-            imprimirAST(arvore_sintatica, 0);
+            //printf("\n--- ÁRVORE SINTÁTICA ---\n");
+            //imprimirAST(arvore_sintatica, 0);
         } else {
             printf("ERRO!\n");
            // imprimirAST(arvore_sintatica, 0);

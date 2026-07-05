@@ -4,7 +4,7 @@
 #include <regex.h>
 #include "lexer.h"
 
-#define QTD_PADROES 12
+#define QTD_PADROES 14
 
 typedef struct{
     const char *padrao;
@@ -15,7 +15,9 @@ typedef struct{
 TokenDef definicoes[] ={
    {"^/\\*([^*]|\\*+[^/*])*\\*+/", TOKEN_COMMENT, "COMENTARIO"},
    {"^\"([^\"\\\\\n\r]|\\\\[^\n\r])*\"", TOKEN_STRING, "STRING"},
+   {"^'([^'\\\\\n\r]|\\\\[^\n\r])*'", TOKEN_STRING, "STRING"},
    {"^\"([^\"\\\\\n\r]|\\\\[^\n\r])*", TOKEN_ERROR, "ERRO_STR"},
+   {"^'([^'\\\\\n\r]|\\\\[^\n\r])*", TOKEN_ERROR, "ERRO_CHAR"},
    {"^(if|else|return|while|wesley|for|do|int|float|char|void)", TOKEN_KEYWORD, "P_CHAVE"},
    {"^[0-9]+\\.[0-9.]*\\.[0-9.]*", TOKEN_ERROR, "ERRO_NUM"},
    {"^[0-9]+[a-zA-Z_][a-zA-Z0-9_]*", TOKEN_ERROR, "ERRO_ID"},
